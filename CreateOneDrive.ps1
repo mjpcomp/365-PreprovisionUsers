@@ -1,10 +1,11 @@
 # Set your SharePoint Tenant name below, typically it's https://businessname-admin.sharepoint.com
-# In this case, set the $TenantName varible to the BusinessName (without the -admin, we'll add that automatically)
+# In this case, set the $tenantName varible to the BusinessName (without the -admin, we'll add that automatically)
+# This script will require some PowerShell add-ins, mainly the SharePoint online management shell
 
-$TenantName = Microsoft
+$tenantName = "MyBizName"
 $Credential = Get-Credential
 Connect-MsolService -Credential $Credential
-Connect-SPOService -Credential $Credential -Url https://$TenantName-admin.sharepoint.com
+Connect-SPOService -Credential $Credential -Url https://$tenantName-admin.sharepoint.com
 
 $list = @()
 #Counters
