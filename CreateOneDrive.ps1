@@ -3,36 +3,31 @@
 # This script will require some PowerShell add-ins, mainly the SharePoint online management shell
 
 $tenantName = "MyBizName"
-$Credential = Get-Credential
-Connect-MsolService -Credential $Credential
-Connect-SPOService -Credential $Credential -Url https://$tenantName-admin.sharepoint.com
+# Connect-MsolService -Credential $Credential
+Connect-SPOService -Url https://$tenantName-admin.sharepoint.com
+Connect-AzureAD
 
-$list = @()
-#Counters
-$i = 0
-
-
-#Get licensed users
-$users = Get-MsolUser -All | Where-Object { $_.islicensed -eq $true }
+#Get licensed users and initiate their OneDrive creation
+$users = Get-AzureAdUser -All $true | ForEach { $licensed=$False ; For ($i=0; $i -le ($_.AssignedLicenses | Measure).Count ; $i++) { If( [string]::IsNullOrEmpty(  $_.AssignedLicenses[$i].SkuId ) -ne $True) { $licensed=$true } } ; If( $licensed -eq $true) { Return $_.UserPrincipalName} }
 #total licensed users
 $count = $users.count
 
-foreach ($u in $users) {
-    $i++
-    Write-Host "$i/$count"
+Write-Host "There are $count Licensed Users that will have a OneDrive For Business initialized for them."
+Write-Host "Please wait..."
 
-    $upn = $u.userprincipalname
-    $list += $upn
-
-    if ($i -eq 199) {
-        #We reached the limit
-        Request-SPOPersonalSite -UserEmails $list -NoWait
-        Start-Sleep -Milliseconds 655
-        $list = @()
-        $i = 0
-    }
+Get-AzureAdUser -All $true | 
+ForEach {
+	$licensed=$False
+	For ($i=0; $i -le ($_.AssignedLicenses | Measure).Count ; $i++) {
+		If( [string]::IsNullOrEmpty(  $_.AssignedLicenses[$i].SkuId ) -ne $True) {
+			$licensed=$true 
+		} 
+	}
+	If( $licensed -eq $true) { 
+	Write-Host "Setting up $_.UserPrincipalName"
+    Request-SPOPersonalSite -UserEmails $_.UserPrincipalName -NoWait
+    Start-Sleep -Milliseconds 655
+	}
 }
 
-if ($i -gt 0) {
-    Request-SPOPersonalSite -UserEmails $list -NoWait
-}
+Write-Host "Process is Complete..."
